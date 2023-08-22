@@ -3,6 +3,7 @@
   hosts: localhost
   gather_facts: false
   tasks:
+  
     - name: Open ServiceNow incident
       servicenow.itsm.incident:
         state: new
@@ -12,6 +13,7 @@
         impact: high
         urgency: high
       register: incident
+
     - name: Set ServiceNow incident state
       servicenow.itsm.incident:
         state: in_progress

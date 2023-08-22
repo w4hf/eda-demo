@@ -1,0 +1,11 @@
+---
+- name: Close ServiceNow incident 
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: "Close {{ incident }} incident"
+      servicenow.itsm.incident:
+        state: closed
+        number: "{{ incident }}"
+        close_code: "Solved (Permanently)"
+        close_notes: "Incident fixed by Ansible EDA"

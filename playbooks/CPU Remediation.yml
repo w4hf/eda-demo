@@ -7,6 +7,11 @@
 
   tasks:
 
+    - name: Set AAP job id
+      ansible.builtin.set_stats:
+        data:
+          aap_job_id: "{{ tower_job_id }}"
+
     - name: Initialize resolution vars
       ansible.builtin.set_stats:
         data:

@@ -19,25 +19,25 @@
     - name: Run CPU Remediation Job
       condition: event.payload.state == 'OPEN' and event.payload.text == 'CPU problem'
       action:
-        run_job_template:
-          name: CPU Remediate
+        run_workflow_template:
+          name: '[WF] Remediate Cloud Machine CPU'
           organization: Default
           job_args:
             extra_vars:
-              dynatrace_alert_severity: test_severity
-              dynatrace_alert_id: test_id
-              dynatrace_alert_impact: test_impact
-              dynatrace_alert_url: test_url
+              dynatrace_alert_severity: "{{ event.payload.severity }}"
+              dynatrace_alert_id: "{{ event.payload.problem_id }}"
+              dynatrace_alert_impact: "{{ event.payload.impact }}"
+              dynatrace_alert_url: "{{ event.payload.url }}"
 
     - name: Run Disk Remediation Job
       condition: event.payload.state == 'OPEN' and event.payload.text == 'Low Disk Space problem'
       action:
-        run_job_template:
-          name: FS Remediate
+        run_workflow_template:
+          name: '[WF] Remediate Cloud Machine DISK'
           organization: Default
           job_args:
             extra_vars:
-              dynatrace_alert_severity: test_severity
-              dynatrace_alert_id: test_id
-              dynatrace_alert_impact: test_impact
-              dynatrace_alert_url: test_url
+              dynatrace_alert_severity: "{{ event.payload.severity }}"
+              dynatrace_alert_id: "{{ event.payload.problem_id }}"
+              dynatrace_alert_impact: "{{ event.payload.impact }}"
+              dynatrace_alert_url: "{{ event.payload.url }}"

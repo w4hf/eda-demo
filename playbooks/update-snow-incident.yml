@@ -1,0 +1,29 @@
+---
+- name: Update ServiceNow incident
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: "Get output from Job ID {{ aap_job_id }}"
+      ansible.builtin.uri:
+        url: "{{ lookup('env', 'CONTROLLER_HOST') }}/api/v2/jobs/{{ aap_job_id }}/stdout?format=txt_download"
+        user: "{{ lookup('env', 'CONTROLLER_USERNAME') }}"
+        password: "{{ lookup('env', 'CONTROLLER_PASSWORD') }}"
+        force_basic_auth: yes
+        return_content: yes
+        dest: /tmp
+        method: GET
+        status_code:
+          - 200
+          - 201
+        body_format: json
+        headers:
+          Content-Type: application/json
+        validate_certs: "{{ lookup('env', 'CONTROLLER_VERIFY_SSL') }}"
+    - name: "Update {{ incident }} incident"
+      servicenow.itsm.incident:
+        state: on_hold
+        hold_reason: awaiting_problem
+        number: "{{ incident }}"
+        attachments: 
+          - path: "/tmp/job_{{ aap_job_id }}.txt"
+      ignore_errors: yes
