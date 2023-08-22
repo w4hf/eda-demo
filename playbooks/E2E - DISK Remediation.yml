@@ -1,0 +1,189 @@
+- name: Open ServiceNow incident 
+  hosts: localhost
+  gather_facts: false
+  tasks:
+  
+    - name: Open ServiceNow incident
+      servicenow.itsm.incident:
+        state: new
+        caller: ansible-eda
+        short_description: "Dynatrace {{ dynatrace_alert_severity }} {{ dynatrace_alert_id }} - {{ dynatrace_alert_impact }}"
+        description: "Dynatrace alert URL: {{ dynatrace_alert_url }}"
+        impact: high
+        urgency: high
+      register: incident
+
+    - name: Set ServiceNow incident state
+      servicenow.itsm.incident:
+        state: in_progress
+        number: "{{ incident.record.number }}"
+    
+    - name: Set ServiceNow incident number
+      ansible.builtin.set_facts:
+        data:
+          incident: "{{ incident.record.number }}"
+
+- name: "E2E Disk Remediation - Purging Log Files > 500 mb under {{ monitored_path }}"
+  hosts: all
+  become: true
+  gather_facts: false
+  vars:
+    monitored_path: /tmp/demo
+
+  tasks:
+
+    # - name: Set AAP job id
+    #   ansible.builtin.set_stats:
+    #     data:
+    #       aap_job_id: "{{ tower_job_id }}"
+
+    # - name: Initialize resolution vars
+    #   ansible.builtin.set_stats:
+    #     data:
+    #       incident_resolved: false
+    #       incident_msg: "Error while trying to solve incident using Ansible."
+
+    - name: Initialize resolution vars
+      ansible.builtin.set_fact:
+        incident_resolved: false
+        incident_msg: "Error while trying to solve incident using Ansible."
+
+    - name: Find Log Files > 500mb
+      ansible.builtin.find:
+        paths: "{{ monitored_path }}"
+        recurse: true
+        file_type: file
+        use_regex: true
+        patterns:
+          - '^.*\.log.*$'
+        size: 500m
+      register: find
+
+    - name: No Log file found. Nothing to do by Ansible
+      when: find.matched == 0
+      block:
+        - name: Display message if no log file found
+          ansible.builtin.debug:
+            msg: "No Log file > 500 mb found in {{ monitored_path }} !"
+
+        - name: Set resolution to false
+          ansible.builtin.set_stats:
+            data:
+              incident_resolved: false
+              incident_msg: "No log file found under  {{ monitored_path }}. Incident NOT resolved by Ansible."
+
+        - name: Initialize resolution vars
+          ansible.builtin.set_fact:
+            incident_resolved: false
+            incident_msg: "No log file found under  {{ monitored_path }}. Incident NOT resolved by Ansible."
+
+        - name: "Get output from Job ID {{ aap_job_id }}"
+          ansible.builtin.uri:
+            url: "{{ lookup('env', 'CONTROLLER_HOST') }}/api/v2/jobs/{{ aap_job_id }}/stdout?format=txt_download"
+            user: "{{ lookup('env', 'CONTROLLER_USERNAME') }}"
+            password: "{{ lookup('env', 'CONTROLLER_PASSWORD') }}"
+            force_basic_auth: yes
+            return_content: yes
+            dest: /tmp
+            method: GET
+            status_code:
+              - 200
+              - 201
+            body_format: json
+            headers:
+              Content-Type: application/json
+            validate_certs: "{{ lookup('env', 'CONTROLLER_VERIFY_SSL') }}"
+          when: not incident_resolved
+
+        - name: "Update {{ incident }} incident"
+          servicenow.itsm.incident:
+            state: on_hold
+            hold_reason: awaiting_problem
+            number: "{{ incident }}"
+            attachments: 
+              - path: "/tmp/job_{{ aap_job_id }}.txt"
+          ignore_errors: yes
+          when: not incident_resolved
+          delegate_to: localhost
+
+    - name: Log file found. Trying to solve the problem
+      when: find.matched != 0
+      block:
+        - name: Display message if log files found
+          ansible.builtin.debug:
+            msg: "{{ find.matched }} log file(s) > 500 mb found in {{ monitored_path }} !!"
+
+        - name: Delete log file if .log.*
+          ansible.builtin.file:
+            path: "{{ item.path }}"
+            state: absent
+          when: "item.path.endswith('.log') == 0"
+          with_items: "{{ find.files }}"
+
+        - name: Set resolution to true
+          ansible.builtin.set_stats:
+            data:
+              incident_resolved: true
+              incident_msg: "Log file(s) under {{ monitored_path }} were purged. Incident resolved by Ansible EDA."
+
+        - name: Initialize resolution vars
+          ansible.builtin.set_fact:
+            incident_resolved: true
+            incident_msg: "Log file(s) under {{ monitored_path }} were purged. Incident resolved by Ansible EDA."
+
+        - name: "Close {{ incident }} incident"
+          servicenow.itsm.incident:
+            state: closed
+            number: "{{ incident }}"
+            close_code: "Solved (Permanently)"
+            close_notes: "{{ incident_msg }}"
+          delegate_facts: true
+          delegate_to: localhost
+          when: incident_resolved
+
+      rescue:
+        - name: Set resolution to false
+          ansible.builtin.set_stats:
+            data:
+              incident_resolved: false
+              incident_msg: "Ansible tried to solve the incident but failed. Please check controller Job Logs. continue investigating the incident manually."
+
+        - name: Initialize resolution vars
+          ansible.builtin.set_fact:
+            incident_resolved: false
+            incident_msg: "Ansible tried to solve the incident but failed. Please check controller Job Logs. continue investigating the incident manually."
+
+        - name: End play
+          ansible.builtin.fail:
+            msg: "{{ incident_msg }}"
+          when: not incident_resolved
+
+        - name: "Get output from Job ID {{ aap_job_id }}"
+          ansible.builtin.uri:
+            url: "{{ lookup('env', 'CONTROLLER_HOST') }}/api/v2/jobs/{{ aap_job_id }}/stdout?format=txt_download"
+            user: "{{ lookup('env', 'CONTROLLER_USERNAME') }}"
+            password: "{{ lookup('env', 'CONTROLLER_PASSWORD') }}"
+            force_basic_auth: yes
+            return_content: yes
+            dest: /tmp
+            method: GET
+            status_code:
+              - 200
+              - 201
+            body_format: json
+            headers:
+              Content-Type: application/json
+            validate_certs: "{{ lookup('env', 'CONTROLLER_VERIFY_SSL') }}"
+          delegate_to: localhost
+          when: not incident_resolved
+
+        - name: "Update {{ incident }} incident"
+          servicenow.itsm.incident:
+            state: on_hold
+            hold_reason: awaiting_problem
+            number: "{{ incident }}"
+            attachments: 
+              - path: "/tmp/job_{{ aap_job_id }}.txt"
+          ignore_errors: yes
+          when: not incident_resolved
+          delegate_to: localhost

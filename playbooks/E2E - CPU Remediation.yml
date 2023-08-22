@@ -1,0 +1,132 @@
+- name: Open ServiceNow incident 
+  hosts: localhost
+  gather_facts: false
+  tasks:
+  
+    - name: Open ServiceNow incident
+      servicenow.itsm.incident:
+        state: new
+        caller: ansible-eda
+        short_description: "Dynatrace {{ dynatrace_alert_severity }} {{ dynatrace_alert_id }} - {{ dynatrace_alert_impact }}"
+        description: "Dynatrace alert URL: {{ dynatrace_alert_url }}"
+        impact: high
+        urgency: high
+      register: incident
+
+    - name: Set ServiceNow incident state
+      servicenow.itsm.incident:
+        state: in_progress
+        number: "{{ incident.record.number }}"
+    
+    - name: Set ServiceNow incident number
+      ansible.builtin.set_facts:
+        data:
+          incident: "{{ incident.record.number }}"
+
+- name: "E2E CPU Remediation"
+  hosts: all
+  become: true
+  gather_facts: false
+  vars:
+    monitored_program: stress
+
+  tasks:
+
+    # - name: Set AAP job id
+    #   ansible.builtin.set_stats:
+    #     data:
+    #       aap_job_id: "{{ tower_job_id }}"
+
+    # - name: Initialize resolution vars
+    #   ansible.builtin.set_stats:
+    #     data:
+    #       incident_resolved: false
+    #       incident_msg: "Error while trying to solve incident using Ansible."
+
+    - name: Initialize resolution vars
+      ansible.builtin.set_fact:
+        incident_resolved: false
+        incident_msg: "Error while trying to solve incident using Ansible."
+
+    - name: Trying to solve the problem
+      block:
+
+        - name: Get running processes
+          ansible.builtin.shell: "ps -ef | grep -v grep | grep -w {{ monitored_program }} | awk '{print $2}'"
+          register: running_processes
+
+        - name: Kill running processes
+          ansible.builtin.shell: "kill {{ item }}"
+          with_items: "{{ running_processes.stdout_lines }}"
+
+        - name: Wait for process death
+          ansible.builtin.wait_for:
+            path: "/proc/{{ item }}/status"
+            state: absent
+          with_items: "{{ running_processes.stdout_lines }}"
+          # ignore_errors: true
+          register: killed_processes
+
+        - name: Force kill stuck processes
+          ansible.builtin.shell: "kill -9 {{ item }}"
+          with_items: "{{ killed_processes.results | select('failed') | map(attribute='item') | list }}"
+
+        # - name: Set resolution to true
+        #   ansible.builtin.set_stats:
+        #     data:
+        #       incident_resolved: true
+        #       incident_msg: "Process {{ monitored_program }} killed. Incident resolved by Ansible EDA."
+
+        - name: Initialize resolution vars
+          ansible.builtin.set_fact:
+            incident_resolved: true
+            incident_msg: "Process {{ monitored_program }} killed. Incident resolved by Ansible EDA."
+
+        - name: "Close {{ incident }} incident"
+          servicenow.itsm.incident:
+            state: closed
+            number: "{{ incident }}"
+            close_code: "Solved (Permanently)"
+            close_notes: "{{ incident_msg }}"
+          delegate_to: localhost
+          delegate_facts: true
+          when: incident_resolved
+
+      rescue:
+        # - name: Set resolution to false
+        #   ansible.builtin.set_stats:
+        #     data:
+        #       incident_resolved: false
+        #       incident_msg: "Ansible tried to solve the incident but failed. Please check controller Job Logs. continue investigating the incident manually."
+
+        - name: Initialize resolution vars
+          ansible.builtin.set_fact:
+            incident_resolved: false
+            incident_msg: "Ansible tried to solve the incident but failed. Please check controller Job Logs. continue investigating the incident manually."
+
+        - name: "Get output from Job ID {{ tower_job_id }}"
+          ansible.builtin.uri:
+            url: "{{ lookup('env', 'CONTROLLER_HOST') }}/api/v2/jobs/{{ tower_job_id }}/stdout?format=txt_download"
+            user: "{{ lookup('env', 'CONTROLLER_USERNAME') }}"
+            password: "{{ lookup('env', 'CONTROLLER_PASSWORD') }}"
+            force_basic_auth: yes
+            return_content: yes
+            dest: /tmp
+            method: GET
+            status_code:
+              - 200
+              - 201
+            body_format: json
+            headers:
+              Content-Type: application/json
+            validate_certs: "{{ lookup('env', 'CONTROLLER_VERIFY_SSL') }}"
+
+        - name: "Update {{ incident }} incident"
+          servicenow.itsm.incident:
+            state: on_hold
+            hold_reason: awaiting_problem
+            number: "{{ incident }}"
+            attachments: 
+              - path: "/tmp/job_{{ tower_job_id }}.txt"
+          ignore_errors: yes
+          delegate_to: localhost
