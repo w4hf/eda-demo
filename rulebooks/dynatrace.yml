@@ -19,8 +19,10 @@
     - name: Run CPU Remediation Job
       condition: event.payload.state == 'OPEN' and event.payload.text == 'CPU problem'
       action:
-        run_workflow_template:
-          name: '[WF] Remediate Cloud Machine CPU'
+        # run_workflow_template:
+        #   name: '[WF] Remediate Cloud Machine CPU'
+        run_job_template:
+          name: 'E2E - CPU Remediation'
           organization: Default
           job_args:
             extra_vars:
@@ -32,8 +34,10 @@
     - name: Run Disk Remediation Job
       condition: event.payload.state == 'OPEN' and event.payload.text == 'Low Disk Space problem'
       action:
-        run_workflow_template:
-          name: '[WF] Remediate Cloud Machine DISK'
+        # run_workflow_template:
+        #   name: '[WF] Remediate Cloud Machine DISK'
+        run_job_template:
+          name: 'E2E - DISK Remediation'
           organization: Default
           job_args:
             extra_vars:
