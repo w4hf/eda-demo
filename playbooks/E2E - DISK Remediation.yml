@@ -94,11 +94,11 @@
             validate_certs: "{{ lookup('env', 'CONTROLLER_VERIFY_SSL') }}"
           when: not incident_resolved
 
-        - name: "Update {{ incident }} incident"
+        - name: "Update {{ hostvars.localhost.incident }} incident"
           servicenow.itsm.incident:
             state: on_hold
             hold_reason: awaiting_problem
-            number: "{{ incident }}"
+            number: "{{ hostvars.localhost.incident }}"
             attachments: 
               - path: "/tmp/job_{{ aap_job_id }}.txt"
           ignore_errors: yes
@@ -130,10 +130,10 @@
             incident_resolved: true
             incident_msg: "Log file(s) under {{ monitored_path }} were purged. Incident resolved by Ansible EDA."
 
-        - name: "Close {{ incident }} incident"
+        - name: "Close {{ hostvars.localhost.incident }} incident"
           servicenow.itsm.incident:
             state: closed
-            number: "{{ incident }}"
+            number: "{{ hostvars.localhost.incident }}"
             close_code: "Solved (Permanently)"
             close_notes: "{{ incident_msg }}"
           delegate_facts: true
@@ -176,11 +176,11 @@
           delegate_to: localhost
           when: not incident_resolved
 
-        - name: "Update {{ incident }} incident"
+        - name: "Update {{ hostvars.localhost.incident }} incident"
           servicenow.itsm.incident:
             state: on_hold
             hold_reason: awaiting_problem
-            number: "{{ incident }}"
+            number: "{{ hostvars.localhost.incident }}"
             attachments: 
               - path: "/tmp/job_{{ aap_job_id }}.txt"
           ignore_errors: yes

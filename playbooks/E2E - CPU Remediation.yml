@@ -81,14 +81,13 @@
             incident_resolved: true
             incident_msg: "Process {{ monitored_program }} killed. Incident resolved by Ansible EDA."
 
-        - name: "Close {{ incident }} incident"
+        - name: "Close {{ hostvars.localhost.incident }} incident"
           servicenow.itsm.incident:
             state: closed
-            number: "{{ incident }}"
+            number: "{{ hostvars.localhost.incident }}"
             close_code: "Solved (Permanently)"
             close_notes: "{{ incident_msg }}"
           delegate_to: localhost
-          delegate_facts: true
           when: incident_resolved
 
       rescue:
@@ -120,11 +119,11 @@
               Content-Type: application/json
             validate_certs: "{{ lookup('env', 'CONTROLLER_VERIFY_SSL') }}"
 
-        - name: "Update {{ incident }} incident"
+        - name: "Update {{ hostvars.localhost.incident }} incident"
           servicenow.itsm.incident:
             state: on_hold
             hold_reason: awaiting_problem
-            number: "{{ incident }}"
+            number: "{{ hostvars.localhost.incident }}"
             attachments: 
               - path: "/tmp/job_{{ tower_job_id }}.txt"
           ignore_errors: yes
