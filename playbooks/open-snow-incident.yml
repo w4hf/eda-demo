@@ -1,0 +1,23 @@
+---
+- name: Open ServiceNow incident 
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Open ServiceNow incident
+      servicenow.itsm.incident:
+        state: new
+        caller: ansible-eda
+        short_description: "Dynatrace {{ dynatrace_alert_severity }} {{ dynatrace_alert_id }} - {{ dynatrace_alert_impact }}"
+        description: "Dynatrace alert URL: {{ dynatrace_alert_url }}"
+        impact: high
+        urgency: high
+      register: incident
+    - name: Set ServiceNow incident state
+      servicenow.itsm.incident:
+        state: in_progress
+        number: "{{ incident.record.number }}"
+    
+    - name: Set ServiceNow incident number
+      ansible.builtin.set_stats:
+        data:
+          incident: "{{ incident.record.number }}"

@@ -1,0 +1,70 @@
+- name: "Trying to remediate the issue - Killing {{  monitored_program  }}"
+  hosts: all
+  become: true
+  gather_facts: false
+  vars:
+    monitored_program: stress
+
+  tasks:
+
+    - name: Initialize resolution vars
+      ansible.builtin.set_stats:
+        data:
+          incident_resolved: false
+          incident_msg: "Error while trying to solve incident using Ansible."
+
+    - name: Initialize resolution vars
+      ansible.builtin.set_fact:
+        incident_resolved: false
+        incident_msg: "Error while trying to solve incident using Ansible."
+
+    - name: Trying to solve the problem
+      block:
+
+        - name: Get running processes
+          ansible.builtin.shell: "ps -ef | grep -v grep | grep -w {{ monitored_program }} | awk '{print $2}'"
+          register: running_processes
+
+        - name: Kill running processes
+          ansible.builtin.shell: "kill {{ item }}"
+          with_items: "{{ running_processes.stdout_lines }}"
+
+        - name: Wait for process death
+          ansible.builtin.wait_for:
+            path: "/proc/{{ item }}/status"
+            state: absent
+          with_items: "{{ running_processes.stdout_lines }}"
+          ignore_errors: true
+          register: killed_processes
+
+        - name: Force kill stuck processes
+          ansible.builtin.shell: "kill -9 {{ item }}"
+          with_items: "{{ killed_processes.results | select('failed') | map(attribute='item') | list }}"
+
+        - name: Set resolution to true
+          ansible.builtin.set_stats:
+            data:
+              incident_resolved: true
+              incident_msg: "Process {{ monitored_program }} killed. Incident resolved by Ansible EDA."
+
+        - name: Initialize resolution vars
+          ansible.builtin.set_fact:
+            incident_resolved: true
+            incident_msg: "Process {{ monitored_program }} killed. Incident resolved by Ansible EDA."
+
+      rescue:
+        - name: Set resolution to false
+          ansible.builtin.set_stats:
+            data:
+              incident_resolved: false
+              incident_msg: "Ansible tried to solve the incident but failed. Please check controller Job Logs. continue investigating the incident manually."
+
+        - name: Initialize resolution vars
+          ansible.builtin.set_fact:
+            incident_resolved: false
+            incident_msg: "Ansible tried to solve the incident but failed. Please check controller Job Logs. continue investigating the incident manually."
+
+        - name: End play
+          ansible.builtin.fail:
+            msg: "{{ incident_msg }}"
+          when: not incident_resolved
