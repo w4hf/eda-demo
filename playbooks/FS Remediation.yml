@@ -1,0 +1,75 @@
+- name: "Trying to remediate the issue - Purging Log Files > 500 mb under {{ monitored_path }}"
+  hosts: all
+  become: true
+  vars:
+    monitored_path: /tmp/demo
+  
+  tasks:
+
+    - name: Initialize resolution vars
+      ansible.builtin.set_stats:
+        data:
+          incident_resolved: false
+          incident_msg: "Error while trying to solve incident using Ansible."
+      
+    - name: Find Log Files > 500mb
+      ansible.builtin.find:
+        paths: "{{ monitored_path }}"
+        recurse: true
+        file_type: file
+        use_regex: true
+        patterns:
+          - '^.*\.log.*$'
+        size: 500m
+      register: find
+
+    - name: No Log file found. Nothing to do by Ansible
+      when: find.matched == 0
+      block:
+        - name: Display message if no log file found
+          ansible.builtin.debug:
+            msg: "No Log file > 500 mb found in {{ monitored_path }}" !!"
+
+        - name: Set resolution to false
+          ansible.builtin.set_stats:
+            data:
+              incident_resolved: false
+              incident_msg: "No log file found under  {{ monitored_path }}. Incident NOT resolved by Ansible."
+
+        - name: End play
+          ansible.builtin.fail:
+            msg: "No log file found under  {{ monitored_path }}. Incident NOT resolved by Ansible."
+          when: not incident_resolved
+
+    - name: Log file found. Trying to solve the problem
+      when: find.matched != 0
+      block:
+        - name: Display message if log files found
+          ansible.builtin.debug:
+            msg: "{{ find.matched }} log file(s) > 500 mb found in {{ monitored_path }} !!"
+
+        - name: Delete log file if .log.*
+          ansible.builtin.file:
+            path: "{{ item.path }}"
+            state: absent
+          when: "item.path.endswith('.log') == 0"
+          with_items: "{{ find.files }}"
+        
+        - name: Set resolution to true
+          ansible.builtin.set_stats:
+            data:
+              incident_resolved: true
+              incident_msg: "Log file(s) under {{ monitored_path }} were purged. Incident resolved by Ansible EDA."
+
+      rescue:
+        - name: Set resolution to false
+          ansible.builtin.set_stats:
+            data:
+              incident_resolved: false
+              incident_msg: "Ansible tried to solve the incident but failed. Please check controller Job Logs. continue investigating the incident manually."
+
+        - name: End play
+          ansible.builtin.fail:
+            msg: "{{ incident_msg }}"
+          when: not incident_resolved
+  
