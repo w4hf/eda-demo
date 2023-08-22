@@ -3,7 +3,7 @@
   become: true
   vars:
     monitored_path: /tmp/demo
-  
+
   tasks:
 
     - name: Initialize resolution vars
@@ -11,7 +11,7 @@
         data:
           incident_resolved: false
           incident_msg: "Error while trying to solve incident using Ansible."
-      
+
     - name: Find Log Files > 500mb
       ansible.builtin.find:
         paths: "{{ monitored_path }}"
@@ -28,7 +28,7 @@
       block:
         - name: Display message if no log file found
           ansible.builtin.debug:
-            msg: "No Log file > 500 mb found in {{ monitored_path }}" !!"
+            msg: "No Log file > 500 mb found in {{ monitored_path }} !"
 
         - name: Set resolution to false
           ansible.builtin.set_stats:
@@ -54,7 +54,7 @@
             state: absent
           when: "item.path.endswith('.log') == 0"
           with_items: "{{ find.files }}"
-        
+
         - name: Set resolution to true
           ansible.builtin.set_stats:
             data:
@@ -72,4 +72,3 @@
           ansible.builtin.fail:
             msg: "{{ incident_msg }}"
           when: not incident_resolved
-  
