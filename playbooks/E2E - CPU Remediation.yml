@@ -24,7 +24,6 @@
 
 - name: "E2E CPU Remediation"
   hosts: all
-  become: true
   gather_facts: false
   vars:
     monitored_program: stress
@@ -53,10 +52,12 @@
         - name: Get running processes
           ansible.builtin.shell: "ps -ef | grep -v grep | grep -w {{ monitored_program }} | awk '{print $2}'"
           register: running_processes
+          become: true
 
         - name: Kill running processes
           ansible.builtin.shell: "kill {{ item }}"
           with_items: "{{ running_processes.stdout_lines }}"
+          become: true
 
         - name: Wait for process death
           ansible.builtin.wait_for:
@@ -65,10 +66,12 @@
           with_items: "{{ running_processes.stdout_lines }}"
           # ignore_errors: true
           register: killed_processes
+          become: true
 
         - name: Force kill stuck processes
           ansible.builtin.shell: "kill -9 {{ item }}"
           with_items: "{{ killed_processes.results | select('failed') | map(attribute='item') | list }}"
+          become: true
 
         # - name: Set resolution to true
         #   ansible.builtin.set_stats:
