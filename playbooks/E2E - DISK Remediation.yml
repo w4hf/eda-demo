@@ -20,8 +20,7 @@
     
     - name: Set ServiceNow incident number
       ansible.builtin.set_fact:
-        data:
-          incident: "{{ incident.record.number }}"
+        incident: "{{ incident.record.number }}"
 
 - name: "E2E Disk Remediation - Purging Log Files > 500 mb under {{ monitored_path }}"
   hosts: all
@@ -66,11 +65,11 @@
           ansible.builtin.debug:
             msg: "No Log file > 500 mb found in {{ monitored_path }} !"
 
-        - name: Set resolution to false
-          ansible.builtin.set_stats:
-            data:
-              incident_resolved: false
-              incident_msg: "No log file found under  {{ monitored_path }}. Incident NOT resolved by Ansible."
+        # - name: Set resolution to false
+        #   ansible.builtin.set_stats:
+        #     data:
+        #       incident_resolved: false
+        #       incident_msg: "No log file found under  {{ monitored_path }}. Incident NOT resolved by Ansible."
 
         - name: Initialize resolution vars
           ansible.builtin.set_fact:
@@ -120,11 +119,11 @@
           when: "item.path.endswith('.log') == 0"
           with_items: "{{ find.files }}"
 
-        - name: Set resolution to true
-          ansible.builtin.set_stats:
-            data:
-              incident_resolved: true
-              incident_msg: "Log file(s) under {{ monitored_path }} were purged. Incident resolved by Ansible EDA."
+        # - name: Set resolution to true
+        #   ansible.builtin.set_stats:
+        #     data:
+        #       incident_resolved: true
+        #       incident_msg: "Log file(s) under {{ monitored_path }} were purged. Incident resolved by Ansible EDA."
 
         - name: Initialize resolution vars
           ansible.builtin.set_fact:
@@ -142,11 +141,11 @@
           when: incident_resolved
 
       rescue:
-        - name: Set resolution to false
-          ansible.builtin.set_stats:
-            data:
-              incident_resolved: false
-              incident_msg: "Ansible tried to solve the incident but failed. Please check controller Job Logs. continue investigating the incident manually."
+        # - name: Set resolution to false
+        #   ansible.builtin.set_stats:
+        #     data:
+        #       incident_resolved: false
+        #       incident_msg: "Ansible tried to solve the incident but failed. Please check controller Job Logs. continue investigating the incident manually."
 
         - name: Initialize resolution vars
           ansible.builtin.set_fact:
