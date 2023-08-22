@@ -19,7 +19,7 @@
         number: "{{ incident.record.number }}"
     
     - name: Set ServiceNow incident number
-      ansible.builtin.set_facts:
+      ansible.builtin.set_fact:
         data:
           incident: "{{ incident.record.number }}"
 
