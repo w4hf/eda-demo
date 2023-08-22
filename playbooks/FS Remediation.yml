@@ -1,6 +1,7 @@
 - name: "Trying to remediate the issue - Purging Log Files > 500 mb under {{ monitored_path }}"
   hosts: all
   become: true
+  gather_facts: false
   vars:
     monitored_path: /tmp/demo
 
@@ -11,6 +12,11 @@
         data:
           incident_resolved: false
           incident_msg: "Error while trying to solve incident using Ansible."
+
+    - name: Initialize resolution vars
+      ansible.builtin.set_fact:
+        incident_resolved: false
+        incident_msg: "Error while trying to solve incident using Ansible."
 
     - name: Find Log Files > 500mb
       ansible.builtin.find:
@@ -35,6 +41,11 @@
             data:
               incident_resolved: false
               incident_msg: "No log file found under  {{ monitored_path }}. Incident NOT resolved by Ansible."
+
+        - name: Initialize resolution vars
+          ansible.builtin.set_fact:
+            incident_resolved: false
+            incident_msg: "No log file found under  {{ monitored_path }}. Incident NOT resolved by Ansible."
 
         - name: End play
           ansible.builtin.fail:
@@ -61,12 +72,22 @@
               incident_resolved: true
               incident_msg: "Log file(s) under {{ monitored_path }} were purged. Incident resolved by Ansible EDA."
 
+        - name: Initialize resolution vars
+          ansible.builtin.set_fact:
+            incident_resolved: true
+            incident_msg: "Log file(s) under {{ monitored_path }} were purged. Incident resolved by Ansible EDA."
+
       rescue:
         - name: Set resolution to false
           ansible.builtin.set_stats:
             data:
               incident_resolved: false
               incident_msg: "Ansible tried to solve the incident but failed. Please check controller Job Logs. continue investigating the incident manually."
+
+        - name: Initialize resolution vars
+          ansible.builtin.set_fact:
+            incident_resolved: false
+            incident_msg: "Ansible tried to solve the incident but failed. Please check controller Job Logs. continue investigating the incident manually."
 
         - name: End play
           ansible.builtin.fail:
