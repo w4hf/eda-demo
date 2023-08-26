@@ -13,7 +13,7 @@
       condition:   event.payload.text == "Watches-eShop application problem"
       action:
         run_job_template:
-          name: 'Watches Debug'
+          name: 'Launch Watches Workflow'
           organization: Default
           job_args:
             extra_vars:
