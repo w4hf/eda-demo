@@ -9,8 +9,8 @@
 
   rules:
 
-    - name: Debug watches event
-      condition:   event.payload.text == "Watches-eShop application problem"
+    - name: Remediate Watches App
+      condition: event.payload.text == "Watches-eShop application problem"
       action:
         run_job_template:
           name: 'Launch Watches Workflow'
