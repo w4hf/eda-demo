@@ -17,7 +17,7 @@
           organization: Default
 
     - name: Run CPU Remediation Job
-      condition: event.payload.state == 'OPEN' and event.payload.text == 'CPU problem'
+      condition: event.payload.state == 'OPEN' and event.payload.text == 'CPU problem' and event.payload.impact == 'CPU saturation on Host cloud-demo-machine'  
       action:
         # run_workflow_template:
         #   name: '[WF] Remediate Cloud Machine CPU'
