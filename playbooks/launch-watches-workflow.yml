@@ -1,0 +1,18 @@
+- hosts: localhost
+  gather_facts: false
+  tasks:
+    - name:
+      ansible.controller.workflow_launch:
+        name: '[WF] Remediate Watches-eShop application'
+        extra_vars:
+          dynatrace_alert_text: "{{ ansible_eda.event.payload.text }}"
+          dynatrace_alert_id: "{{ ansible_eda.event.payload.problem_id }}"
+          dynatrace_alert_title: "{{ ansible_eda.event.payload.title }}"
+          dynatrace_alert_severity: "{{ ansible_eda.event.payload.severity }}"
+          dynatrace_alert_url: "{{ ansible_eda.event.payload.url }}"
+          dynatrace_alert_impact: "{{ ansible_eda.event.payload.impact }}"
+          dynatrace_alert_tags: "{{ ansible_eda.event.payload.tags }}"
+          dynatrace_alert_root_cause: "{{ ansible_eda.event.payload.rootCause }}"
+          dynatrace_alert_root_state: "{{ ansible_eda.event.payload.state }}"
+          dynatrace_alert_root_event_type: "{{ ansible_eda.event.payload.eventType }}"
+          dynatrace_alert_root_event_id: "{{ ansible_eda.event.payload.eventID }}"
