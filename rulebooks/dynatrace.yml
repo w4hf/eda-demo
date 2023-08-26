@@ -9,12 +9,25 @@
 
   rules:
 
-    - name: Run Test Job
-      condition: event.payload.test == 'yes'
+    - name: Debug watches event
+      condition:   event.payload.text == "Watches-eShop application problem"
       action:
         run_job_template:
-          name: Demo Job Template
+          name: 'Watches Debug'
           organization: Default
+          job_args:
+            extra_vars:
+              dynatrace_alert_text: "{{ event.payload.text }}"
+              dynatrace_alert_id: "{{ event.payload.problem_id }}"
+              dynatrace_alert_title: "{{ event.payload.title }}"
+              dynatrace_alert_severity: "{{ event.payload.severity }}"
+              dynatrace_alert_url: "{{ event.payload.url }}"
+              dynatrace_alert_impact: "{{ event.payload.impact }}"
+              dynatrace_alert_tags: "{{ event.payload.tags }}"
+              dynatrace_alert_root_cause: "{{ event.payload.rootCause }}"
+              dynatrace_alert_root_state: "{{ event.payload.state }}"
+              dynatrace_alert_root_event_type: "{{ event.payload.eventType }}"
+              dynatrace_alert_root_event_id: "{{ event.payload.eventID }}"
 
     - name: Run CPU Remediation Job
       condition: event.payload.state == 'OPEN' and event.payload.text == 'CPU problem' and event.payload.impact == 'CPU saturation on Host cloud-demo-machine'  
