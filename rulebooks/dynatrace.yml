@@ -15,8 +15,8 @@
         run_job_template:
           name: 'Launch Watches Workflow'
           organization: Default
-          job_args:
-            extra_vars:
+          # job_args:
+            # extra_vars:
               # dynatrace_alert_text: "{{ event.payload.text }}"
               # dynatrace_alert_id: "{{ event.payload.problem_id }}"
               # dynatrace_alert_title: "{{ event.payload.title }}"
